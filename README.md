@@ -1,6 +1,12 @@
 # Thx for fix: pls fix + AI comments
 
-A replica of the Pls Fix browser extension with an added AI Comments feature. Edit any website visually and get AI-powered feedback before creating a pull request.
+A replica of the Pls Fix browser extension with an added AI Comments feature.
+
+
+https://github.com/user-attachments/assets/0cb17e06-84d1-4b66-92fe-7e568ae3bbbe
+
+
+
 
 **What the AI analyzes:**
 
