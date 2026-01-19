@@ -1,6 +1,13 @@
-# Pls Fix Clone
+# Thx for fix: pls fix + AI comments
 
-A browser extension that lets you edit your website right from your website. Make changes to any page, and create GitHub pull requests directly from your browser.
+A replica of the Pls Fix browser extension with an added AI Comments feature. Edit any website visually and get AI-powered feedback before creating a pull request.
+
+**What the AI analyzes:**
+
+- **Style Review** - Checks if changes match the existing design system
+- **Smart Suggestions** - Recommends improvements and catches potential problems
+- **Risk Detection** - Warns about CSS cascade issues, responsive breakpoints, and accessibility concerns
+- **PR Score** - Overall quality rating (0-100) based on code consistency and best practices
 
 ## Features
 
@@ -10,10 +17,6 @@ A browser extension that lets you edit your website right from your website. Mak
 - **Change Tracking**: All changes are tracked and can be reverted
 - **GitHub Integration**: Connect to your GitHub repos and create PRs with your changes
 - **🆕 AI Comments**: Get AI-powered code review on your changes before creating a PR
-
-## AI Comments Feature
-
-The AI Comments feature provides intelligent feedback on your DOM changes using LLMs (OpenAI GPT-4 or Anthropic Claude).
 
 ### Architecture
 
@@ -38,20 +41,20 @@ The AI Comments feature provides intelligent feedback on your DOM changes using 
 
 ### PR Scoring Criteria
 
-| Score | Description |
-|-------|-------------|
-| **Code Consistency** | Does the change match surrounding code patterns? |
-| **Reuse Score** | Does it leverage existing utilities? |
-| **AI Detection Risk** | Would a reviewer flag this as AI-generated? |
-| **Cascade Risk** | Will CSS changes affect other elements? |
-| **Responsive Score** | Are breakpoints handled correctly? |
-| **Semantic Score** | Is semantic HTML preserved? |
-| **Intent Alignment** | Does it match user intent? |
+| Score                 | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| **Code Consistency**  | Does the change match surrounding code patterns? |
+| **Reuse Score**       | Does it leverage existing utilities?             |
+| **AI Detection Risk** | Would a reviewer flag this as AI-generated?      |
+| **Cascade Risk**      | Will CSS changes affect other elements?          |
+| **Responsive Score**  | Are breakpoints handled correctly?               |
+| **Semantic Score**    | Is semantic HTML preserved?                      |
+| **Intent Alignment**  | Does it match user intent?                       |
 
 ### Risk Categories
 
 - **Cascade**: CSS cascade effects on other elements
-- **Responsive**: Mobile/tablet breakpoint issues  
+- **Responsive**: Mobile/tablet breakpoint issues
 - **Accessibility**: A11y concerns
 - **Performance**: Performance implications
 - **Semantic**: HTML structure issues
@@ -214,6 +217,7 @@ npx serve .
 ## Tech Stack
 
 ### Extension
+
 - **React 18** - UI components
 - **Styled Components** - CSS-in-JS styling
 - **MobX State Tree** - State management
@@ -221,6 +225,7 @@ npx serve .
 - **Webpack** - Bundling
 
 ### Backend
+
 - **Node.js + Express** - API server
 - **Prisma** - ORM for PostgreSQL
 - **Passport.js** - GitHub OAuth authentication
@@ -229,27 +234,32 @@ npx serve .
 ## API Endpoints
 
 ### Auth
+
 - `GET /auth/github` - Initiate GitHub OAuth
 - `GET /auth/github/callback` - OAuth callback
 - `GET /auth/me` - Get current user
 
 ### Repositories
+
 - `GET /api/repos` - List user's GitHub repos
 - `GET /api/repos/:owner/:repo/branches` - List branches
 - `POST /api/repos/connect` - Connect repo to website
 - `GET /api/repos/connected` - List connected repos
 
 ### Changes
+
 - `POST /api/changes` - Save changes
 - `GET /api/changes/:projectId` - Get changes for project
 - `DELETE /api/changes/:changeId` - Delete a change
 
 ### Pull Requests
+
 - `POST /api/pull-requests` - Create a PR
 - `GET /api/pull-requests` - List PRs
 - `GET /api/pull-requests/:prId` - Get PR details
 
 ### AI Comments
+
 - `POST /api/ai-comments/analyze` - Analyze changes (SSE streaming)
 - `POST /api/ai-comments/analyze-single` - Analyze a single change
 - `GET /api/ai-comments/health` - Check AI service configuration
@@ -282,6 +292,7 @@ npx prisma migrate dev --name your_migration_name
 ## Design System
 
 ### Colors
+
 - Primary Text: `#130F18`
 - Secondary Text: `#646464`
 - Primary Action (Mint): `#10B981`
@@ -289,6 +300,7 @@ npx prisma migrate dev --name your_migration_name
 - Background: `#FFFFFF`
 
 ### Typography
+
 - Font: SF Pro Text / Inter
 - Sizes: 11px (xs), 12px (sm), 13px (base), 14px (md)
 
