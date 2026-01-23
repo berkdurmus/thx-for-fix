@@ -1,9 +1,14 @@
-# Thx for fix: pls fix + AI comments
+# Thx for fix: pls fix + AI comments + Voice mode. 
 
 A replica of the Pls Fix browser extension with an added AI Comments feature.
 
+AI Comments: 
 
 https://github.com/user-attachments/assets/0cb17e06-84d1-4b66-92fe-7e568ae3bbbe
+
+Voice mode:
+
+https://github.com/user-attachments/assets/8b09d8b7-1d9e-4705-90c0-a07c70b2e219
 
 
 
