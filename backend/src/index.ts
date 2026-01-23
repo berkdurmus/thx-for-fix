@@ -9,6 +9,7 @@ import { reposRouter } from './routes/repos';
 import { changesRouter } from './routes/changes';
 import { pullRequestsRouter } from './routes/pullRequests';
 import { aiCommentsRouter } from './routes/aiComments';
+import { voiceRouter } from './routes/voice';
 
 // Load environment variables
 const PORT = process.env.PORT || 3001;
@@ -65,6 +66,7 @@ app.use('/api/repos', reposRouter);
 app.use('/api/changes', changesRouter);
 app.use('/api/pull-requests', pullRequestsRouter);
 app.use('/api/ai-comments', aiCommentsRouter);
+app.use('/api/voice', voiceRouter);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -169,11 +169,104 @@ const AICommentModel = types.model('AIComment', {
   tokensUsed: types.number,
 });
 
+// Voice Command History Model
+const VoiceCommandHistoryModel = types.model('VoiceCommandHistory', {
+  id: types.identifier,
+  transcript: types.string,
+  interpretation: types.string,
+  changes: types.frozen<Array<{
+    type: 'style' | 'text';
+    elementId?: string;
+    elementSelector?: string;
+    elementDescription?: string;
+    styles?: Record<string, string>;
+    text?: string;
+  }>>(),
+  timestamp: types.number,
+  success: types.boolean,
+});
+
+// Voice Mode State Model
+const VoiceModeModel = types
+  .model('VoiceMode', {
+    status: types.optional(
+      types.enumeration(['idle', 'recording', 'processing', 'applying', 'complete', 'error']),
+      'idle'
+    ),
+    transcript: types.optional(types.string, ''),
+    interimTranscript: types.optional(types.string, ''),
+    interpretation: types.optional(types.string, ''),
+    error: types.maybe(types.string),
+    clarificationNeeded: types.maybe(types.string),
+    suggestions: types.optional(types.array(types.string), []),
+    history: types.array(VoiceCommandHistoryModel),
+    isVoiceInputOpen: types.optional(types.boolean, false),
+  })
+  .actions((self) => ({
+    setStatus(status: 'idle' | 'recording' | 'processing' | 'applying' | 'complete' | 'error') {
+      self.status = status;
+    },
+    setTranscript(transcript: string) {
+      self.transcript = transcript;
+    },
+    setInterimTranscript(interimTranscript: string) {
+      self.interimTranscript = interimTranscript;
+    },
+    setInterpretation(interpretation: string) {
+      self.interpretation = interpretation;
+    },
+    setError(error: string | undefined) {
+      self.error = error;
+      if (error) {
+        self.status = 'error';
+      }
+    },
+    setClarificationNeeded(clarification: string | undefined) {
+      self.clarificationNeeded = clarification;
+    },
+    setSuggestions(suggestions: string[]) {
+      self.suggestions.replace(suggestions);
+    },
+    setVoiceInputOpen(open: boolean) {
+      self.isVoiceInputOpen = open;
+    },
+    addToHistory(item: {
+      id: string;
+      transcript: string;
+      interpretation: string;
+      changes: Array<{
+        type: 'style' | 'text';
+        elementId?: string;
+        elementSelector?: string;
+        elementDescription?: string;
+        styles?: Record<string, string>;
+        text?: string;
+      }>;
+      timestamp: number;
+      success: boolean;
+    }) {
+      self.history.unshift(VoiceCommandHistoryModel.create(item));
+      // Keep only last 50 items
+      if (self.history.length > 50) {
+        self.history.pop();
+      }
+    },
+    reset() {
+      self.status = 'idle';
+      self.transcript = '';
+      self.interimTranscript = '';
+      self.interpretation = '';
+      self.error = undefined;
+      self.clarificationNeeded = undefined;
+      self.suggestions.clear();
+    },
+  }));
+
 // UI State Model
 const UIStateModel = types
   .model('UIState', {
     activeTab: types.optional(
-      types.enumeration(['design', 'changes', 'pullRequests', 'aiComments']),
+      types.enumeration(['design', 'changes', 'pullRequests', 'aiComments', 'voice']),
       'design'
     ),
     isLoading: types.optional(types.boolean, false),
@@ -181,7 +274,7 @@ const UIStateModel = types
     isAnalyzing: types.optional(types.boolean, false),
   })
   .actions((self) => ({
-    setActiveTab(tab: 'design' | 'changes' | 'pullRequests' | 'aiComments') {
+    setActiveTab(tab: 'design' | 'changes' | 'pullRequests' | 'aiComments' | 'voice') {
       self.activeTab = tab;
     },
     setLoading(loading: boolean) {
@@ -216,6 +309,7 @@ export const RootStore = types
     aiComments: types.array(AICommentModel),
     user: types.maybe(UserModel),
     ui: types.optional(UIStateModel, {}),
+    voiceMode: types.optional(VoiceModeModel, {}),
     currentWebsiteUrl: types.optional(types.string, ''),
   })
   .views((self) => ({
@@ -349,6 +443,53 @@ export const RootStore = types
     },
     clearAIComments() {
       self.aiComments.clear();
+    },
+    // Voice mode actions
+    openVoiceInput() {
+      self.voiceMode.setVoiceInputOpen(true);
+      self.ui.setActiveTab('voice');
+    },
+    closeVoiceInput() {
+      self.voiceMode.setVoiceInputOpen(false);
+    },
+    applyVoiceChanges(changes: Array<{
+      type: 'style' | 'text';
+      elementId?: string;
+      styles?: Record<string, string>;
+      text?: string;
+    }>) {
+      self.voiceMode.setStatus('applying');
+      
+      for (const change of changes) {
+        const elementId = change.elementId || self.selectedElement?.id;
+        if (!elementId) continue;
+        
+        if (change.type === 'style' && change.styles) {
+          chrome.runtime.sendMessage({
+            type: 'APPLY_STYLE',
+            payload: {
+              elementId,
+              styles: change.styles,
+            },
+          });
+        } else if (change.type === 'text' && change.text) {
+          chrome.runtime.sendMessage({
+            type: 'APPLY_TEXT',
+            payload: {
+              elementId,
+              text: change.text,
+            },
+          });
+        }
+      }
+      
+      self.voiceMode.setStatus('complete');
+      // Reset to idle after a short delay
+      setTimeout(() => {
+        if (self.voiceMode.status === 'complete') {
+          self.voiceMode.setStatus('idle');
+        }
+      }, 2000);
     },
   }));
 
