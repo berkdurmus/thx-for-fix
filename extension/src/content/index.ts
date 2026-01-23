@@ -1,5 +1,7 @@
 import { createElementInfo, generateId } from '../shared/utils';
-import { Change, ElementInfo, Message, ApplyStylePayload, ApplyTextPayload } from '../shared/types';
+import { Change, ElementInfo, Message, ApplyStylePayload, ApplyTextPayload, DOMContextPayload, VoiceProcessingResultPayload, VoiceChange } from '../shared/types';
+import { getDOMContext } from './domContext';
+import { createVoiceOverlay, VoiceOverlay } from './voiceOverlay';
 
 // State
 let isEditModeEnabled = false;
@@ -9,6 +11,7 @@ let overlayContainer: HTMLDivElement | null = null;
 let selectedOverlay: HTMLDivElement | null = null;
 let hoverOverlay: HTMLDivElement | null = null;
 let editTooltip: HTMLDivElement | null = null;
+let voiceOverlay: VoiceOverlay | null = null;
 const elementIdMap = new Map<string, HTMLElement>();
 const originalStates = new Map<string, { textContent: string; styles: Record<string, string> }>();
 
@@ -16,6 +19,132 @@ const originalStates = new Map<string, { textContent: string; styles: Record<str
 function init() {
   createOverlayContainer();
   setupMessageListener();
+  initVoiceOverlay();
+}
+
+// Initialize voice overlay
+function initVoiceOverlay() {
+  voiceOverlay = createVoiceOverlay({
+    onSubmit: handleVoiceSubmit,
+    onCancel: handleVoiceCancel,
+  });
+}
+
+// Handle voice transcript submission
+function handleVoiceSubmit(transcript: string) {
+  console.log('=== Content Script: Voice Submit ===');
+  console.log('Transcript:', transcript);
+  console.log('Selected element:', selectedElement);
+
+  try {
+    if (!selectedElement) {
+      voiceOverlay?.setState('error', 'Please select an element first');
+      return;
+    }
+
+    const elementId = selectedElement.getAttribute('data-plsfix-id');
+    const elementInfo = elementId ? createElementInfo(selectedElement, elementId) : null;
+
+    console.log('Element ID:', elementId);
+    console.log('Element Info:', elementInfo);
+
+    // Send transcript to sidepanel for processing
+    const payload = {
+      transcript,
+      selectedElement: elementInfo,
+      pageUrl: window.location.href,
+      pageTitle: document.title,
+    };
+    console.log('Sending VOICE_TRANSCRIPT:', payload);
+
+    const sent = sendMessage('VOICE_TRANSCRIPT', payload);
+    if (!sent) {
+      voiceOverlay?.setState('error', 'Extension reloaded. Refresh the page.');
+      setTimeout(() => voiceOverlay?.hide(), 1500);
+    }
+  } catch (error) {
+    console.warn('handleVoiceSubmit failed:', error);
+    voiceOverlay?.setState('error', 'Extension reloaded. Refresh the page.');
+    setTimeout(() => voiceOverlay?.hide(), 1500);
+  }
+}
+
+// Handle voice cancel
+function handleVoiceCancel() {
+  // Nothing special needed
+}
+
+// Show voice overlay
+function showVoiceOverlay() {
+  if (!isExtensionContextValid()) {
+    showNotification('Extension reloaded. Refresh the page.');
+    return;
+  }
+  if (!selectedElement) {
+    // Show a brief notification that element selection is required
+    showNotification('Please select an element first (click on any element)');
+    return;
+  }
+  voiceOverlay?.show();
+}
+
+// Show a brief notification
+function showNotification(message: string) {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1F2937;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    z-index: 2147483647;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: plsfix-notification-in 0.3s ease;
+  `;
+  notification.textContent = message;
+
+  // Add animation keyframes if not exists
+  if (!document.getElementById('plsfix-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'plsfix-notification-styles';
+    style.textContent = `
+      @keyframes plsfix-notification-in {
+        from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      @keyframes plsfix-notification-out {
+        from { opacity: 1; transform: translateX(-50%) translateY(0); }
+        to { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'plsfix-notification-out 0.3s ease forwards';
+    setTimeout(() => notification.remove(), 300);
+  }, 2500);
+}
+
+// Apply voice changes received from sidepanel
+function applyVoiceChanges(changes: VoiceChange[]) {
+  for (const change of changes) {
+    const elementId = change.elementId || selectedElement?.getAttribute('data-plsfix-id');
+    if (!elementId) continue;
+
+    if (change.type === 'style' && change.styles) {
+      applyStyle(elementId, change.styles);
+    } else if (change.type === 'text' && change.text) {
+      applyText(elementId, change.text);
+    }
+  }
 }
 
 // Create overlay container for selection highlights
@@ -114,6 +243,38 @@ function setupMessageListener() {
         const { changeId } = message.payload as { changeId: string };
         revertChange(changeId);
         break;
+
+      case 'GET_DOM_CONTEXT':
+        // Get DOM context for voice processing
+        const context = getDOMContext(selectedElement || undefined);
+        sendResponse({ success: true, context });
+        return true;
+
+      case 'OPEN_VOICE_INPUT':
+        // Show voice overlay on the page
+        showVoiceOverlay();
+        break;
+
+      case 'VOICE_PROCESSING_RESULT':
+        console.log('=== Content Script: Received VOICE_PROCESSING_RESULT ===');
+        const resultPayload = message.payload as VoiceProcessingResultPayload;
+        console.log('Result payload:', resultPayload);
+        if (resultPayload.success && resultPayload.changes) {
+          console.log('Applying changes:', resultPayload.changes);
+          applyVoiceChanges(resultPayload.changes);
+          voiceOverlay?.setState('success', resultPayload.interpretation || 'Changes applied!');
+        } else {
+          console.log('No changes or not successful:', resultPayload.error);
+          voiceOverlay?.setState('error', resultPayload.error || 'Failed to process command');
+        }
+        break;
+
+      case 'VOICE_PROCESSING_ERROR':
+        console.log('=== Content Script: Received VOICE_PROCESSING_ERROR ===');
+        const errorPayload = message.payload as { error: string };
+        console.log('Error:', errorPayload.error);
+        voiceOverlay?.setState('error', errorPayload.error || 'An error occurred');
+        break;
     }
 
     sendResponse({ success: true });
@@ -195,11 +356,12 @@ function handleDoubleClick(e: MouseEvent) {
 
 // Handle keyboard shortcuts
 function handleKeyDown(e: KeyboardEvent) {
-  // Cmd+K or Ctrl+K for AI edit
+  // Cmd+K or Ctrl+K for AI/Voice edit
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault();
-    // TODO: Trigger AI edit modal
-    console.log('AI Edit triggered');
+    // Show voice overlay on the page
+    showVoiceOverlay();
+    console.log('Voice Edit triggered');
   }
 
   // Escape to deselect
@@ -489,8 +651,35 @@ function revertChange(changeId: string) {
 }
 
 // Send message to background/side panel
-function sendMessage(type: string, payload: unknown) {
-  chrome.runtime.sendMessage({ type, payload });
+function isExtensionContextValid(): boolean {
+  try {
+    return typeof chrome !== 'undefined' && !!chrome.runtime?.id;
+  } catch {
+    return false;
+  }
+}
+
+function sendMessage(type: string, payload: unknown): boolean {
+  try {
+    if (!isExtensionContextValid()) {
+      throw new Error('Extension context invalidated');
+    }
+
+    chrome.runtime.sendMessage({ type, payload }, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        console.warn('sendMessage failed:', error.message);
+        showNotification('Extension reloaded. Please refresh the page.');
+        voiceOverlay?.setState('error', 'Extension reloaded. Refresh the page.');
+      }
+    });
+    return true;
+  } catch (error) {
+    console.warn('sendMessage failed:', error);
+    showNotification('Extension reloaded. Please refresh the page.');
+    voiceOverlay?.setState('error', 'Extension reloaded. Refresh the page.');
+    return false;
+  }
 }
 
 // Initialize when DOM is ready

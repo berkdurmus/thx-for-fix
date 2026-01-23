@@ -89,7 +89,15 @@ export type MessageType =
   | 'REVERT_CHANGE'
   | 'GET_CHANGES'
   | 'TOGGLE_EDIT_MODE'
-  | 'SIDEPANEL_READY';
+  | 'SIDEPANEL_READY'
+  | 'VOICE_COMMAND_START'
+  | 'VOICE_COMMAND_RESULT'
+  | 'GET_DOM_CONTEXT'
+  | 'DOM_CONTEXT_RESPONSE'
+  | 'OPEN_VOICE_INPUT'
+  | 'VOICE_TRANSCRIPT'
+  | 'VOICE_PROCESSING_RESULT'
+  | 'VOICE_PROCESSING_ERROR';
 
 export interface Message {
   type: MessageType;
@@ -111,7 +119,7 @@ export interface ApplyTextPayload {
 }
 
 // UI State types
-export type TabType = 'design' | 'changes' | 'pullRequests' | 'aiComments';
+export type TabType = 'design' | 'changes' | 'pullRequests' | 'aiComments' | 'voice';
 
 export interface User {
   id: string;
@@ -119,4 +127,79 @@ export interface User {
   email: string;
   avatarUrl: string;
   accessToken: string;
+}
+
+// Voice mode types
+export type VoiceModeStatus = 'idle' | 'recording' | 'processing' | 'applying' | 'complete' | 'error';
+
+export interface VoiceChange {
+  type: 'style' | 'text';
+  elementId?: string;
+  elementSelector?: string;
+  elementDescription?: string;
+  styles?: Record<string, string>;
+  text?: string;
+}
+
+export interface VoiceCommandResult {
+  understood: boolean;
+  interpretation: string;
+  changes: VoiceChange[];
+  clarificationNeeded?: string;
+  suggestions?: string[];
+  error?: string;
+}
+
+export interface VoiceCommandPayload {
+  transcript: string;
+  changes: VoiceChange[];
+}
+
+export interface VoiceCommandHistoryItem {
+  id: string;
+  transcript: string;
+  interpretation: string;
+  changes: VoiceChange[];
+  timestamp: number;
+  success: boolean;
+}
+
+export interface ElementSummary {
+  tagName: string;
+  id?: string;
+  className?: string;
+  textContent?: string;
+  isInteractive: boolean;
+}
+
+export interface DOMContextPayload {
+  url: string;
+  title: string;
+  selectedElement?: ElementInfo;
+  visibleElements: ElementSummary[];
+}
+
+export interface VoiceProcessRequest {
+  transcript: string;
+  selectedElement?: ElementInfo;
+  pageContext: {
+    url: string;
+    title: string;
+    visibleElements: ElementSummary[];
+  };
+}
+
+// Voice overlay message payloads (for content script <-> sidepanel communication)
+export interface VoiceTranscriptPayload {
+  transcript: string;
+  selectedElement?: ElementInfo;
+  pageUrl: string;
+  pageTitle: string;
+}
+
+export interface VoiceProcessingResultPayload {
+  success: boolean;
+  interpretation?: string;
+  changes?: VoiceChange[];
+  error?: string;
 }

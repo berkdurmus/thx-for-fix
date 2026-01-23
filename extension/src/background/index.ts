@@ -36,8 +36,50 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     case 'ELEMENT_HOVERED':
     case 'ELEMENT_DESELECTED':
     case 'CHANGE_RECORDED':
+    case 'VOICE_COMMAND_START':
+    case 'VOICE_COMMAND_RESULT':
+    case 'OPEN_VOICE_INPUT':
       // Forward to side panel
       forwardToSidePanel(message);
+      break;
+
+    case 'VOICE_TRANSCRIPT':
+      // Forward to side panel
+      console.log('=== Background: Forwarding VOICE_TRANSCRIPT to sidepanel ===');
+      console.log('Message:', message);
+      forwardToSidePanel(message);
+      break;
+
+    case 'VOICE_PROCESSING_RESULT':
+    case 'VOICE_PROCESSING_ERROR':
+      // Forward from sidepanel back to content script
+      console.log(`=== Background: Forwarding ${message.type} to content script ===`);
+      console.log('Message:', message);
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        console.log('Active tab:', tabs[0]?.id);
+        if (tabs[0]?.id) {
+          forwardToContentScript(tabs[0].id, message);
+        }
+      });
+      break;
+
+    case 'GET_DOM_CONTEXT':
+      // Forward to content script and get response
+      if (tabId) {
+        chrome.tabs.sendMessage(tabId, message, (response) => {
+          sendResponse(response);
+        });
+        return true; // Keep channel open for async response
+      } else {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, message, (response) => {
+              sendResponse(response);
+            });
+          }
+        });
+        return true;
+      }
       break;
 
     case 'APPLY_STYLE':

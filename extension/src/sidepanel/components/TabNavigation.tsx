@@ -77,6 +77,31 @@ const AIBadge = styled.span`
   letter-spacing: 0.5px;
 `;
 
+const VoiceTab = styled(Tab)<{ $active: boolean }>`
+  background: ${props => props.$active 
+    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)' 
+    : 'transparent'};
+  border-bottom-color: ${props => props.$active ? '#10B981' : 'transparent'};
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%);
+  }
+`;
+
+const VoiceBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
 const AITab = styled(Tab)<{ $active: boolean }>`
   background: ${props => props.$active 
     ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' 
@@ -143,6 +168,15 @@ export const TabNavigation: React.FC = observer(() => {
           <AIBadge>New</AIBadge>
         )}
       </AITab>
+      <VoiceTab $active={activeTab === 'voice'} onClick={() => handleTabChange('voice')}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" x2="12" y1="19" y2="22" />
+        </svg>
+        Voice
+        <VoiceBadge>New</VoiceBadge>
+      </VoiceTab>
     </TabContainer>
   );
 });

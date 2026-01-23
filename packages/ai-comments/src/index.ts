@@ -46,3 +46,15 @@ export type { ScoringWeights } from './scoring/weights';
 // Utilities
 export { calculateConfidence } from './utils/confidence';
 export type { ConfidenceFactors } from './utils/confidence';
+
+// Voice Intent Processing
+export { VoiceIntentProcessor } from './voice/VoiceIntentProcessor';
+export { VOICE_SYSTEM_PROMPT, buildVoicePrompt } from './voice/prompts';
+export type {
+  ElementInfo as VoiceElementInfo,
+  ElementSummary as VoiceElementSummary,
+  VoiceProcessRequest,
+  VoiceProcessResponse,
+  VoiceChange,
+  VoiceIntentProcessorConfig,
+} from './voice/types';
